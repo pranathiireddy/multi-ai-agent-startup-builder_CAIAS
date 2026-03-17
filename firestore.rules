@@ -1,0 +1,131 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: profiles
+    // Document ID: {userId} (Matches Firebase Auth UID)
+    // Fields:
+    //   - displayName: string (required)
+    //   - bio: string (optional)
+    //   - role: string (optional)
+    //   - uid: string (required)
+    //   - updatedAt: string (required, ISO date)
+    //
+    // Collection: blueprints
+    // Document ID: {blueprintId}
+    // Fields:
+    //   - userId: string (required, owner UID)
+    //   - idea: string (required)
+    //   - domain: string (required)
+    //   - budget: string (optional)
+    //   - brandingStyle: string (optional)
+    //   - createdAt: timestamp (required)
+    //   - status: string (required, enum: ['processing', 'completed'])
+    //
+    // Collection: blueprints/{blueprintId}/team_chat
+    // Document ID: {messageId}
+    // Fields:
+    //   - userId: string (required)
+    //   - userName: string (optional)
+    //   - userPhoto: string (optional)
+    //   - text: string (required)
+    //   - timestamp: timestamp (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "prabhakarprabha16585@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidProfile(data) {
+      return data.displayName is string && data.displayName.size() > 0 && data.displayName.size() < 100 &&
+             (!('role' in data) || (data.role is string && data.role.size() < 100)) &&
+             (!('bio' in data) || (data.bio is string && data.bio.size() < 1000)) &&
+             data.uid == request.auth.uid &&
+             data.updatedAt is string;
+    }
+
+    function isValidBlueprint(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.idea is string && data.idea.size() > 0 && data.idea.size() < 500 &&
+             data.domain is string && data.domain.size() > 0 && data.domain.size() < 100 &&
+             (!('budget' in data) || (data.budget is string && data.budget.size() < 100)) &&
+             (!('brandingStyle' in data) || (data.brandingStyle is string && data.brandingStyle.size() < 100)) &&
+             data.createdAt is timestamp &&
+             data.status in ['processing', 'completed'];
+    }
+
+    function isValidTeamMessage(data) {
+      return data.userId == request.auth.uid &&
+             (!('userName' in data) || (data.userName is string)) &&
+             (!('userPhoto' in data) || (data.userPhoto is string)) &&
+             data.text is string && data.text.size() > 0 && data.text.size() < 5000 &&
+             data.timestamp is timestamp;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    function isBlueprintOwner(blueprintId) {
+      return isAuthenticated() && get(/databases/$(database)/documents/blueprints/$(blueprintId)).data.userId == request.auth.uid;
+    }
+
+    match /profiles/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isValidProfile(request.resource.data) && 
+                      (!('role' in request.resource.data) || request.resource.data.role != 'admin');
+      allow update: if isOwner(userId) && isValidProfile(request.resource.data) && 
+                      (request.resource.data.role == resource.data.role || isAdmin());
+    }
+
+    match /blueprints/{blueprintId} {
+      allow read: if isDocOwner() || isAdmin();
+      allow create: if isAuthenticated() && isValidBlueprint(request.resource.data);
+      allow update: if isDocOwner() && isValidBlueprint(request.resource.data) && 
+                      request.resource.data.userId == resource.data.userId;
+      allow delete: if isDocOwner() || isAdmin();
+
+      match /team_chat/{messageId} {
+        allow read: if isBlueprintOwner(blueprintId) || isAdmin();
+        allow create: if isBlueprintOwner(blueprintId) && isValidTeamMessage(request.resource.data);
+      }
+    }
+
+
+    // Default deny
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}

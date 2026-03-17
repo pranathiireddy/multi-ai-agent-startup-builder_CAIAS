@@ -1,0 +1,59 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Stores user profile information and settings.",
+      "type": "object",
+      "properties": {
+        "displayName": { "type": "string", "description": "User's full name" },
+        "role": { "type": "string", "description": "User's current startup role" },
+        "bio": { "type": "string", "description": "Short user biography" },
+        "uid": { "type": "string", "description": "User's unique ID" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Last time the profile was updated" }
+      },
+      "required": ["displayName", "uid", "updatedAt"]
+    },
+    "Blueprint": {
+      "title": "Startup Blueprint",
+      "description": "A generated startup strategy and roadmap.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "UID of the owner" },
+        "idea": { "type": "string", "description": "The startup idea" },
+        "domain": { "type": "string", "description": "The startup's industry domain" },
+        "budget": { "type": "string", "description": "Budget range" },
+        "brandingStyle": { "type": "string", "description": "Visual style preference" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the blueprint was created" },
+        "status": { "type": "string", "enum": ["processing", "completed"], "description": "Current status" }
+      },
+      "required": ["userId", "idea", "domain", "createdAt", "status"]
+    },
+    "TeamMessage": {
+      "title": "Team Chat Message",
+      "description": "A message in the team chat.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "UID of the sender" },
+        "userName": { "type": "string", "description": "Name of the sender" },
+        "userPhoto": { "type": "string", "description": "Photo URL of the sender" },
+        "text": { "type": "string", "description": "Message content" },
+        "timestamp": { "type": "string", "format": "date-time", "description": "When the message was sent" }
+      },
+      "required": ["userId", "text", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/profiles/{userId}": {
+      "schema": "UserProfile",
+      "description": "Private user profile data."
+    },
+    "/blueprints/{blueprintId}": {
+      "schema": "Blueprint",
+      "description": "Startup blueprints owned by users."
+    },
+    "/blueprints/{blueprintId}/team_chat/{messageId}": {
+      "schema": "TeamMessage",
+      "description": "Team chat history for a specific blueprint."
+    }
+  }
+}
