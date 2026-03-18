@@ -9,7 +9,7 @@ Built with a modern technology stack including React, TypeScript, Vite, and Fire
 
 This contains everything you need to run your app locally.
 
-View your app in AI Studio: https://ai.studio/apps/ec599465-99db-475d-966e-c70b6a599cdb?fullscreenApplet=true
+View your app in AI Studio: https://aistudio.google.com/apps/8d580bf9-5bc4-4ee4-a4a3-392c36c5219e?showAssistant=true&project=gen-lang-client-0896774919&showPreview=true&fullscreenApplet=true
 
 Overview
 
